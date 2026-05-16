@@ -3,8 +3,9 @@
 Composable state orchestration kernel for tools, workflows, and animation
 controllers.
 
-This package is intentionally independent from Geukbit. Geukbit should consume
-it through adapters instead of hiding it inside the engine monorepo.
+This package is intentionally independent from any rendering engine, animation
+host, editor, or game runtime. Consumers should adapt it at their integration
+boundary.
 
 ## Position
 
@@ -67,8 +68,8 @@ const definition = {
 ```
 
 The `payload` field lets consumers compose domain-specific meaning onto a
-generic orchestration definition. Geukbit animation can use `{ clip, loop,
-speed }`. An editor tool can use `{ mode }`. A workflow can use `{ phase }`.
+generic orchestration definition. Animation adapters can use `{ clip, loop,
+speed }`. Editor tools can use `{ mode }`. Workflows can use `{ phase }`.
 
 ## Modules
 
@@ -243,17 +244,3 @@ The test suite includes state-machine and behavior-machine scenario witnesses:
   while active child states step independently
 - advanced features: condition groups, event transitions, lifecycle traces, and
   history child restore
-
-## Geukbit Integration Direction
-
-Geukbit should adapt:
-
-```txt
-AnimatorController JSON
-  -> @exornea/ordo definition with animation payloads
-  -> @exornea/ordo runtime cursor
-  -> Animator playback snapshot
-  -> Three.js/WebGPU adapter
-```
-
-This keeps the Ordo library reusable and keeps Geukbit as the composition engine.
