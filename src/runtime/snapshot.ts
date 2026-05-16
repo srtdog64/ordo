@@ -10,8 +10,6 @@ import type {
 export interface OrdoSnapshotOptions {
   readonly actions?: readonly string[];
   readonly actionTrace?: readonly OrdoActionTrace[];
-  readonly delta?: number;
-  readonly timeScale?: number;
 }
 
 export function createOrdoSnapshot<TPayload>(
@@ -32,8 +30,6 @@ export function createOrdoSnapshot<TPayload>(
   return {
     state: runtime.state,
     elapsed: runtime.elapsed,
-    ...(snapshotOptions.delta !== undefined ? { delta: snapshotOptions.delta } : {}),
-    ...(snapshotOptions.timeScale !== undefined ? { timeScale: snapshotOptions.timeScale } : {}),
     ...(runtime.previousState !== undefined ? { previousState: runtime.previousState } : {}),
     ...(runtime.forced ? { forced: true } : {}),
     ...(resolvedState?.payload !== undefined ? { payload: resolvedState.payload } : {}),

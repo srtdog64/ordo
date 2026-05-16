@@ -47,7 +47,6 @@ then resumes stepping with `stepOrdo` or `stepOrdoBehavior`.
 | `forced` | Restore to keep forced overlays active across save/load. |
 | `activeChild` and `child` | Restore together for HBM. If the parent state changes during migration, recreate the child runtime. |
 | `history` | Restore when `OrdoBehaviorDefinition.history` is enabled; this preserves remembered child runtimes by parent state ID. |
-| `parallel` | Restore each named behavior region independently; missing regions can be recreated from the matching definition. |
 
 ## Migration Guidance
 

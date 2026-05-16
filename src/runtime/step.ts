@@ -30,7 +30,6 @@ interface StepContext<TPayload> {
   readonly state: OrdoStateDefinition<TPayload>;
   readonly delta: number;
   readonly elapsed: number;
-  readonly timeScale: number;
   readonly consumeTriggers: boolean;
   readonly events: ReadonlySet<string>;
 }
@@ -87,13 +86,7 @@ function prepareStepContext<TPayload>(
   const stateResult = findOrdoState(definition, runtime.state);
   if (!stateResult.ok) return stateResult;
 
-  const timeScale = Math.max(
-    0,
-    (options.timeScale ?? 1) *
-      (definition.timeScale ?? 1) *
-      (stateResult.value.timeScale ?? 1)
-  );
-  const delta = Math.max(0, deltaSeconds) * timeScale;
+  const delta = Math.max(0, deltaSeconds);
   return ok({
     definition,
     runtime,
@@ -101,7 +94,6 @@ function prepareStepContext<TPayload>(
     state: stateResult.value,
     delta,
     elapsed: runtime.elapsed + delta,
-    timeScale,
     consumeTriggers: options.consumeTriggers ?? true,
     events: new Set(options.events ?? [])
   });
@@ -241,9 +233,7 @@ function finalizeStep<TPayload>(
     runtime: consumedRuntime,
     snapshot: createOrdoSnapshot(ctx.definition, consumedRuntime, draft.nextState, {
       actions: draft.actions,
-      actionTrace: draft.actionTrace,
-      delta: ctx.delta,
-      timeScale: ctx.timeScale
+      actionTrace: draft.actionTrace
     }),
     ...(draft.selectedTransition ? { selectedTransition: draft.selectedTransition } : {})
   };

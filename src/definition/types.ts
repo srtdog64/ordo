@@ -55,7 +55,6 @@ export interface OrdoStateDefinition<TPayload = unknown> {
   readonly onEnter?: readonly string[];
   readonly onUpdate?: readonly string[];
   readonly onExit?: readonly string[];
-  readonly timeScale?: number;
   readonly payload?: TPayload;
 }
 
@@ -76,7 +75,6 @@ export interface OrdoDefinition<TPayload = unknown> {
   readonly parameters?: readonly OrdoParameterDefinition[];
   readonly globalTransitions?: readonly OrdoTransitionDefinition[];
   readonly transitionPolicy?: OrdoTransitionPolicy;
-  readonly timeScale?: number;
   readonly editorLayout?: OrdoEditorLayout;
 }
 
@@ -104,8 +102,6 @@ export interface OrdoRuntime {
 export interface OrdoSnapshot<TPayload = unknown> {
   readonly state: string;
   readonly elapsed: number;
-  readonly delta?: number;
-  readonly timeScale?: number;
   readonly previousState?: string;
   readonly forced?: boolean;
   readonly payload?: TPayload;
@@ -123,7 +119,6 @@ export interface OrdoStepResult<TPayload = unknown> {
 export interface OrdoStepOptions {
   readonly consumeTriggers?: boolean;
   readonly events?: readonly string[];
-  readonly timeScale?: number;
 }
 
 export type OrdoActionPhase = "enter" | "update" | "exit";
@@ -139,7 +134,6 @@ export interface OrdoBehaviorDefinition<TPayload = unknown> {
   readonly machine: OrdoDefinition<TPayload>;
   readonly history?: boolean;
   readonly children?: Readonly<Record<string, OrdoBehaviorDefinition<TPayload>>>;
-  readonly parallel?: Readonly<Record<string, OrdoBehaviorDefinition<TPayload>>>;
 }
 
 export interface OrdoBehaviorRuntime {
@@ -148,7 +142,6 @@ export interface OrdoBehaviorRuntime {
   readonly activeChild?: string;
   readonly child?: OrdoBehaviorRuntime;
   readonly history?: Readonly<Record<string, OrdoBehaviorRuntime>>;
-  readonly parallel?: Readonly<Record<string, OrdoBehaviorRuntime>>;
 }
 
 export interface OrdoBehaviorSnapshot<TPayload = unknown> {
@@ -156,7 +149,6 @@ export interface OrdoBehaviorSnapshot<TPayload = unknown> {
   readonly snapshot: OrdoSnapshot<TPayload>;
   readonly activeChild?: string;
   readonly child?: OrdoBehaviorSnapshot<TPayload>;
-  readonly parallel?: Readonly<Record<string, OrdoBehaviorSnapshot<TPayload>>>;
 }
 
 export interface OrdoBehaviorStepResult<TPayload = unknown> {

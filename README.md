@@ -12,12 +12,11 @@ it through adapters instead of hiding it inside the engine monorepo.
 
 - declarative state orchestration definitions
 - hierarchical behavior machine composition
-- history and parallel behavior regions
+- history behavior state
 - immutable runtime cursors
 - pure stepping
 - recursive transition condition evaluation
 - event-driven transition selection
-- deterministic time-scale control
 - forced state cursors
 - transition priority selection
 - graph projection for editor surfaces
@@ -83,7 +82,7 @@ split by ownership boundary:
 - `machine/`: condition evaluation, active state helpers, indexed state lookup,
   trigger consumption, transition selection, and active transition advancement
 - `runtime/`: runtime creation, stepping, parameter patching, forced state
-  enter/release, time-scale application, lifecycle trace, and snapshot projection
+  enter/release, lifecycle trace, and snapshot projection
 - `projection/`: typed editor graph projection
 - `persistence/`: definition/runtime serialization
 
@@ -143,7 +142,7 @@ Definitions are treated as immutable runtime inputs. Ordo builds and caches a
 state ID index per definition object so state lookup does not depend on a
 linear scan during stepping or snapshot projection.
 
-## Conditions, Events, And Time
+## Conditions And Events
 
 Transitions can use the legacy `conditions` array for simple AND checks, or a
 recursive `condition` expression for `and`, `or`, `not`, parameter checks, and
@@ -171,9 +170,13 @@ stepOrdo(definition, runtime, 0.016, undefined, {
 });
 ```
 
-Time-scale multiplies at three levels: caller option, definition, and active
-state. Ordo records the effective `delta` and `timeScale` in the snapshot so
-hosts can audit slow motion, pause, or speed-up behavior.
+Time scaling is deliberately outside the core stepper. Callers can pass a scaled
+delta directly or use `@exornea/ordo-timescale` for a small helper package:
+
+```ts
+const delta = scaleOrdoDelta({ deltaSeconds: frameDelta, scale: 0.5 });
+const stepped = stepOrdo(definition, runtime, delta);
+```
 
 ## Hierarchical Behavior Machines
 
@@ -202,13 +205,10 @@ This is intentionally HBM composition rather than nested state syntax inside
 actors, tools, and workflows can layer parent/child behavior without mixing
 rendering, editor state, or domain command adapters into Ordo.
 
-HBM supports two optional composition features:
+HBM supports an optional history feature:
 
 - `history: true` remembers the child runtime for each parent state and restores
   it when that parent state is re-entered.
-- `parallel` defines named behavior regions that step independently alongside
-  the parent and active child. Use this for orthogonal concerns such as
-  locomotion plus weapon state.
 
 Snapshots keep `actions` for compatibility and add `actionTrace` with the
 action ID, lifecycle phase, and source state.
@@ -238,8 +238,8 @@ The test suite includes state-machine and behavior-machine scenario witnesses:
   cursor before continuing
 - behavior hierarchy: parent actor states swap locomotion/combat child machines
   while active child states step independently
-- advanced features: condition groups, event transitions, time-scale, lifecycle
-  traces, history child restore, and parallel behavior regions
+- advanced features: condition groups, event transitions, lifecycle traces, and
+  history child restore
 
 ## Geukbit Integration Direction
 

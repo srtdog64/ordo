@@ -75,26 +75,6 @@ describe("advanced orchestration features", () => {
     expect(fell.value.selectedTransition?.transition.id).toBe("fall");
   });
 
-  it("applies definition, state, and caller time-scale multipliers", () => {
-    const definition: OrdoDefinition = {
-      initial: "slow",
-      timeScale: 0.5,
-      states: [{ id: "slow", timeScale: 2, onUpdate: ["tick"] }]
-    };
-    const created = createOrdoRuntime(definition);
-    expect(created.ok).toBe(true);
-    if (!created.ok) return;
-
-    const stepped = stepOrdo(definition, created.value, 1, undefined, { timeScale: 2 });
-    expect(stepped.ok).toBe(true);
-    if (!stepped.ok) return;
-    expect(stepped.value.runtime.elapsed).toBe(2);
-    expect(stepped.value.snapshot).toMatchObject({
-      delta: 2,
-      timeScale: 2
-    });
-  });
-
   it("records lifecycle action traces with state and phase", () => {
     const definition: OrdoDefinition = {
       initial: "idle",
@@ -153,31 +133,6 @@ describe("advanced orchestration features", () => {
     expect(runtime.child?.runtime.state).toBe("walk");
   });
 
-  it("steps parallel behavior regions independently", () => {
-    const definition: OrdoBehaviorDefinition = {
-      id: "actor",
-      machine: { initial: "alive", states: [{ id: "alive" }] },
-      parallel: {
-        locomotion: simpleRegion("moving", "idle", "walk"),
-        weapon: simpleRegion("firing", "ready", "fire")
-      }
-    };
-    let runtime = mustCreateBehavior(definition);
-
-    runtime = {
-      ...runtime,
-      parallel: {
-        locomotion: patchBehaviorRuntime(runtime.parallel!.locomotion, { moving: true }),
-        weapon: patchBehaviorRuntime(runtime.parallel!.weapon, { firing: true })
-      }
-    };
-
-    const stepped = mustStepBehavior(definition, runtime, 0.016);
-    expect(stepped.runtime.parallel?.locomotion.runtime.state).toBe("walk");
-    expect(stepped.runtime.parallel?.weapon.runtime.state).toBe("fire");
-    expect(stepped.snapshot.parallel?.locomotion.snapshot.state).toBe("walk");
-    expect(stepped.snapshot.parallel?.weapon.snapshot.state).toBe("fire");
-  });
 });
 
 function actorBehavior(options: { history: boolean }): OrdoBehaviorDefinition {
@@ -226,16 +181,6 @@ function simpleRegion(
         { id: active }
       ]
     }
-  };
-}
-
-function patchBehaviorRuntime(
-  runtime: OrdoBehaviorRuntime,
-  parameters: Record<string, boolean>
-): OrdoBehaviorRuntime {
-  return {
-    ...runtime,
-    runtime: patchOrdoParameters(runtime.runtime, parameters)
   };
 }
 

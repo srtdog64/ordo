@@ -28,16 +28,9 @@ function createBehaviorRuntimeInternal<TPayload>(
   const root = createOrdoRuntime(definition.machine, policyInput);
   if (!root.ok) return root;
 
-  const parallel = createParallelBehaviorRuntimes(definition, policyInput, policy);
-  if (!parallel.ok) return parallel;
-
   const childDefinition = getActiveChildDefinition(definition, root.value.state);
   if (!childDefinition) {
-    return ok({
-      id: definition.id,
-      runtime: root.value,
-      ...(hasKeys(parallel.value) ? { parallel: parallel.value } : {})
-    });
+    return ok({ id: definition.id, runtime: root.value });
   }
 
   const child = createBehaviorRuntimeInternal(childDefinition, policyInput, policy);
@@ -53,8 +46,7 @@ function createBehaviorRuntimeInternal<TPayload>(
     id: definition.id,
     runtime: root.value,
     activeChild: childDefinition.id,
-    child: child.value,
-    ...(hasKeys(parallel.value) ? { parallel: parallel.value } : {})
+    child: child.value
   });
 }
 
@@ -82,9 +74,6 @@ export function stepOrdoBehavior<TPayload>(
   const steppedRoot = stepOrdo(definition.machine, runtime.runtime, deltaSeconds, policyInput, options);
   if (!steppedRoot.ok) return steppedRoot;
 
-  const parallel = stepParallelBehaviorRuntimes(definition, runtime.parallel, deltaSeconds, policyInput, options, policy);
-  if (!parallel.ok) return parallel;
-
   const history = rememberActiveChild(definition, runtime);
   const childDefinition = getActiveChildDefinition(definition, steppedRoot.value.runtime.state);
   if (!childDefinition) {
@@ -99,13 +88,11 @@ export function stepOrdoBehavior<TPayload>(
       runtime: {
         id: definition.id,
         runtime: steppedRoot.value.runtime,
-        ...(hasKeys(history) ? { history } : {}),
-        ...(hasKeys(parallel.value.runtime) ? { parallel: parallel.value.runtime } : {})
+        ...(hasKeys(history) ? { history } : {})
       },
       snapshot: {
         id: definition.id,
-        snapshot: steppedRoot.value.snapshot,
-        ...(hasKeys(parallel.value.snapshot) ? { parallel: parallel.value.snapshot } : {})
+        snapshot: steppedRoot.value.snapshot
       }
     });
   }
@@ -158,15 +145,13 @@ export function stepOrdoBehavior<TPayload>(
       runtime: steppedRoot.value.runtime,
       activeChild: childDefinition.id,
       child: childStep.value.runtime,
-      ...(hasKeys(history) ? { history } : {}),
-      ...(hasKeys(parallel.value.runtime) ? { parallel: parallel.value.runtime } : {})
+      ...(hasKeys(history) ? { history } : {})
     },
     snapshot: {
       id: definition.id,
       snapshot: steppedRoot.value.snapshot,
       activeChild: childDefinition.id,
-      child: childStep.value.snapshot,
-      ...(hasKeys(parallel.value.snapshot) ? { parallel: parallel.value.snapshot } : {})
+      child: childStep.value.snapshot
     }
   });
 }
@@ -186,8 +171,7 @@ export function createOrdoBehaviorSnapshot<TPayload>(
     ...(runtime.activeChild !== undefined ? { activeChild: runtime.activeChild } : {}),
     ...(childDefinition && runtime.child
       ? { child: createOrdoBehaviorSnapshot(childDefinition, runtime.child) }
-      : {}),
-    ...(runtime.parallel ? { parallel: createParallelBehaviorSnapshots(definition, runtime.parallel) } : {})
+      : {})
   };
 }
 
@@ -203,79 +187,6 @@ function rememberActiveChild(
     ...(runtime.history ?? {}),
     [runtime.runtime.state]: runtime.child
   };
-}
-
-function createParallelBehaviorRuntimes<TPayload>(
-  definition: OrdoBehaviorDefinition<TPayload>,
-  policyInput: OrdoPolicyInput,
-  policy: OrdoPolicy
-): OrdoResult<Record<string, OrdoBehaviorRuntime>> {
-  const runtimes: Record<string, OrdoBehaviorRuntime> = {};
-
-  for (const [region, regionDefinition] of Object.entries(definition.parallel ?? {})) {
-    const created = createBehaviorRuntimeInternal(regionDefinition, policyInput, policy);
-    if (!created.ok) return created;
-    runtimes[region] = created.value;
-  }
-
-  return ok(runtimes);
-}
-
-function stepParallelBehaviorRuntimes<TPayload>(
-  definition: OrdoBehaviorDefinition<TPayload>,
-  runtime: Readonly<Record<string, OrdoBehaviorRuntime>> | undefined,
-  deltaSeconds: number,
-  policyInput: OrdoPolicyInput,
-  options: OrdoStepOptions,
-  policy: OrdoPolicy
-): OrdoResult<{
-  readonly runtime: Record<string, OrdoBehaviorRuntime>;
-  readonly snapshot: Record<string, OrdoBehaviorSnapshot<TPayload>>;
-}> {
-  const runtimes: Record<string, OrdoBehaviorRuntime> = {};
-  const snapshots: Record<string, OrdoBehaviorSnapshot<TPayload>> = {};
-
-  for (const [region, regionDefinition] of Object.entries(definition.parallel ?? {})) {
-    const existing = runtime?.[region];
-    const stepped = existing
-      ? stepOrdoBehavior(regionDefinition, existing, deltaSeconds, policyInput, options)
-      : createAndSnapshotBehavior(regionDefinition, policyInput, policy);
-
-    if (!stepped.ok) return stepped;
-    runtimes[region] = stepped.value.runtime;
-    snapshots[region] = stepped.value.snapshot;
-  }
-
-  return ok({ runtime: runtimes, snapshot: snapshots });
-}
-
-function createAndSnapshotBehavior<TPayload>(
-  definition: OrdoBehaviorDefinition<TPayload>,
-  policyInput: OrdoPolicyInput,
-  policy: OrdoPolicy
-): OrdoResult<OrdoBehaviorStepResult<TPayload>> {
-  const created = createBehaviorRuntimeInternal(definition, policyInput, policy);
-  if (!created.ok) return created;
-  return ok({
-    runtime: created.value,
-    snapshot: createOrdoBehaviorSnapshot(definition, created.value)
-  });
-}
-
-function createParallelBehaviorSnapshots<TPayload>(
-  definition: OrdoBehaviorDefinition<TPayload>,
-  runtime: Readonly<Record<string, OrdoBehaviorRuntime>>
-): Record<string, OrdoBehaviorSnapshot<TPayload>> {
-  const snapshots: Record<string, OrdoBehaviorSnapshot<TPayload>> = {};
-
-  for (const [region, regionRuntime] of Object.entries(runtime)) {
-    const regionDefinition = definition.parallel?.[region];
-    if (regionDefinition) {
-      snapshots[region] = createOrdoBehaviorSnapshot(regionDefinition, regionRuntime);
-    }
-  }
-
-  return snapshots;
 }
 
 function getActiveChildDefinition<TPayload>(

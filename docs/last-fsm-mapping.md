@@ -25,7 +25,7 @@ It is a design witness, not a porting script.
 | xNode graph asset | `createOrdoGraph` result | Ordo does not store editor nodes as runtime authority; graph projection is derived from the definition. |
 | Current state cursor | `serializeOrdoRuntime` | Stores active state, elapsed time, parameters, previous state, active transition, and forced metadata. |
 | Forced state state/previous pair | `OrdoRuntime.forced` | Directly maps from LAST's `forcedState` and `previousState` fields. |
-| Parent plus child behavior machines | `serializeOrdoBehaviorDefinition` and `serializeOrdoBehaviorRuntime` | HBM composition, including optional child history and parallel regions. |
+| Parent plus child behavior machines | `serializeOrdoBehaviorDefinition` and `serializeOrdoBehaviorRuntime` | HBM composition, including optional child history. |
 | Save event channel | Host call site | Ordo stays pure; the host decides when to call serialize/deserialize. |
 
 ## What Does Not Carry Over
@@ -48,5 +48,4 @@ It is a design witness, not a porting script.
 6. Use `forceOrdoState` for LAST-style forced overlays.
 7. Use `OrdoBehaviorDefinition.children` when a parent state should activate a child machine.
 8. Use `history: true` when re-entering a parent state should restore the previous child cursor.
-9. Use `parallel` for orthogonal regions such as locomotion plus weapon state.
-10. Store definitions and runtimes through Ordo JSON helpers; file paths, save slots, and entity IDs remain host-owned.
+9. Store definitions and runtimes through Ordo JSON helpers; file paths, save slots, and entity IDs remain host-owned.
