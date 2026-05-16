@@ -2,6 +2,7 @@ import { err, ordoError, ok, type OrdoError, type OrdoResult, type OrdoStage } f
 import { DefaultOrdoPolicy, resolveOrdoPolicy } from "../core/policy.js";
 import type {
   OrdoCondition,
+  OrdoConditionExpression,
   OrdoDefinition,
   OrdoParameterDefinition,
   OrdoPolicyInput,
@@ -64,7 +65,7 @@ export function inspectOrdoDefinition<TPayload>(
       }
 
       errors.push(...validateConditions(
-        transition.conditions ?? [],
+        getTransitionConditions(transition.conditions, transition.condition),
         parameters,
         policy.validation.allowMissingParameters,
         policy.validation.strictTypeChecking,
@@ -81,7 +82,7 @@ export function inspectOrdoDefinition<TPayload>(
     }
 
     errors.push(...validateConditions(
-      transition.conditions ?? [],
+      getTransitionConditions(transition.conditions, transition.condition),
       parameters,
       policy.validation.allowMissingParameters,
       policy.validation.strictTypeChecking,
@@ -97,8 +98,15 @@ export function inspectOrdoDefinition<TPayload>(
   };
 }
 
+function getTransitionConditions(
+  conditions: readonly OrdoCondition[] | undefined,
+  condition: OrdoConditionExpression | undefined
+): readonly OrdoConditionExpression[] {
+  return [...(conditions ?? []), ...(condition ? [condition] : [])];
+}
+
 function validateConditions(
-  conditions: readonly OrdoCondition[],
+  conditions: readonly OrdoConditionExpression[],
   parameters: ReadonlyMap<string, OrdoParameterDefinition>,
   allowMissingParameters: boolean,
   strictTypeChecking: boolean,
@@ -109,6 +117,31 @@ function validateConditions(
   const errors: OrdoError[] = [];
 
   for (const condition of conditions) {
+    if ("event" in condition) {
+      continue;
+    }
+
+    if ("op" in condition) {
+      if (condition.op === "not" && condition.conditions.length !== 1) {
+        errors.push(ordoError(
+          "CONDITION_VALUE_MISSING",
+          "Not condition groups must contain exactly one child condition",
+          stage,
+          { state, to, operator: "not" }
+        ));
+      }
+      errors.push(...validateConditions(
+        condition.conditions,
+        parameters,
+        allowMissingParameters,
+        strictTypeChecking,
+        stage,
+        state,
+        to
+      ));
+      continue;
+    }
+
     const parameter = parameters.get(condition.parameter);
     if (!parameter) {
       if (!allowMissingParameters) {

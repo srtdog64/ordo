@@ -1,6 +1,10 @@
-import { evaluateOrdoCondition } from "./condition.js";
+import {
+  collectOrdoParameterConditions,
+  evaluateOrdoConditionExpression
+} from "./condition.js";
 import type {
   OrdoDefinition,
+  OrdoCondition,
   OrdoParameterValue,
   OrdoStateDefinition,
   OrdoTransitionDefinition,
@@ -13,11 +17,12 @@ export function selectOrdoTransition<TPayload>(
   definition: OrdoDefinition<TPayload>,
   state: OrdoStateDefinition<TPayload>,
   parameters: Record<string, OrdoParameterValue>,
-  elapsed: number
+  elapsed: number,
+  events: ReadonlySet<string> = new Set()
 ): OrdoTransitionSelection | undefined {
   return (
-    selectFromTransitions("global", state.id, definition.globalTransitions ?? [], parameters, elapsed) ??
-    selectFromTransitions("state", state.id, state.transitions ?? [], parameters, elapsed)
+    selectFromTransitions("global", state.id, definition.globalTransitions ?? [], parameters, elapsed, events) ??
+    selectFromTransitions("state", state.id, state.transitions ?? [], parameters, elapsed, events)
   );
 }
 
@@ -45,13 +50,14 @@ function selectFromTransitions(
   from: string,
   transitions: readonly OrdoTransitionDefinition[],
   parameters: Record<string, OrdoParameterValue>,
-  elapsed: number
+  elapsed: number,
+  events: ReadonlySet<string>
 ): OrdoTransitionSelection | undefined {
   let selected: OrdoTransitionDefinition | undefined;
   let selectedPriority = Number.NEGATIVE_INFINITY;
 
   for (const transition of transitions) {
-    if (!canTakeTransition(transition, parameters, elapsed)) continue;
+    if (!canTakeTransition(transition, parameters, elapsed, events)) continue;
 
     const priority = transition.priority ?? 0;
     if (!selected || priority > selectedPriority) {
@@ -66,10 +72,27 @@ function selectFromTransitions(
 function canTakeTransition(
   transition: OrdoTransitionDefinition,
   parameters: Record<string, OrdoParameterValue>,
-  elapsed: number
+  elapsed: number,
+  events: ReadonlySet<string>
 ): boolean {
   if (transition.exitTime !== undefined && elapsed < transition.exitTime) return false;
-  return (transition.conditions ?? []).every((condition) =>
-    evaluateOrdoCondition(condition, parameters[condition.parameter])
+  const context = { parameters, events };
+  const legacyConditions = transition.conditions ?? [];
+  const legacyOk = legacyConditions.every((condition) =>
+    evaluateOrdoConditionExpression(condition, context)
   );
+  return legacyOk && (
+    transition.condition
+      ? evaluateOrdoConditionExpression(transition.condition, context)
+      : true
+  );
+}
+
+export function getOrdoTransitionParameterConditions(
+  transition: OrdoTransitionDefinition
+): readonly OrdoCondition[] {
+  return [
+    ...(transition.conditions ?? []),
+    ...collectOrdoParameterConditions(transition.condition)
+  ];
 }

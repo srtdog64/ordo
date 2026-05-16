@@ -1,3 +1,4 @@
+import { getOrdoTransitionParameterConditions } from "../machine/transition.js";
 import type { OrdoDefinition, OrdoGraph, OrdoGraphEdge, OrdoGraphNode } from "../definition/types.js";
 
 export function createOrdoGraph<TPayload>(
@@ -23,7 +24,7 @@ export function createOrdoGraph<TPayload>(
       duration: transition.duration ?? 0,
       ...(transition.exitTime !== undefined ? { exitTime: transition.exitTime } : {}),
       priority: transition.priority ?? 0,
-      conditions: transition.conditions ?? []
+      conditions: getOrdoTransitionParameterConditions(transition)
     }))
   );
 
@@ -35,7 +36,7 @@ export function createOrdoGraph<TPayload>(
     duration: transition.duration ?? 0,
     ...(transition.exitTime !== undefined ? { exitTime: transition.exitTime } : {}),
     priority: transition.priority ?? 0,
-    conditions: transition.conditions ?? []
+    conditions: getOrdoTransitionParameterConditions(transition)
   }));
 
   return {

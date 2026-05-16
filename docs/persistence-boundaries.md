@@ -46,6 +46,8 @@ then resumes stepping with `stepOrdo` or `stepOrdoBehavior`.
 | `transition` | Restore to continue blend/blocking windows across save/load. |
 | `forced` | Restore to keep forced overlays active across save/load. |
 | `activeChild` and `child` | Restore together for HBM. If the parent state changes during migration, recreate the child runtime. |
+| `history` | Restore when `OrdoBehaviorDefinition.history` is enabled; this preserves remembered child runtimes by parent state ID. |
+| `parallel` | Restore each named behavior region independently; missing regions can be recreated from the matching definition. |
 
 ## Migration Guidance
 
@@ -58,3 +60,7 @@ then resumes stepping with `stepOrdo` or `stepOrdoBehavior`.
    string, but Ordo should not know about that transport.
 5. Use `consumeTriggers: false` during multi-substep restore/replay loops when
    the host owns frame-level trigger lifetime.
+6. Treat step `events` as transient input. They should be stored in replay logs
+   if needed, but not migrated into `OrdoRuntime.parameters`.
+7. Store lifecycle side effects as adapter-owned action IDs. `actionTrace` is a
+   witness of what Ordo selected, not a command execution log from the host.

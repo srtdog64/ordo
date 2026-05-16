@@ -5,10 +5,12 @@ import { consumeOrdoTriggers } from "../machine/trigger.js";
 import {
   advanceOrdoTransition,
   createOrdoTransitionRuntime,
+  getOrdoTransitionParameterConditions,
   selectOrdoTransition
 } from "../machine/transition.js";
 import { createOrdoSnapshot } from "./snapshot.js";
 import type {
+  OrdoActionTrace,
   OrdoCondition,
   OrdoDefinition,
   OrdoPolicy,
@@ -28,7 +30,9 @@ interface StepContext<TPayload> {
   readonly state: OrdoStateDefinition<TPayload>;
   readonly delta: number;
   readonly elapsed: number;
+  readonly timeScale: number;
   readonly consumeTriggers: boolean;
+  readonly events: ReadonlySet<string>;
 }
 
 type StepMode<TPayload> =
@@ -49,6 +53,7 @@ interface StepDraft<TPayload> {
   readonly nextRuntime: OrdoRuntime;
   readonly nextState: OrdoStateDefinition<TPayload>;
   readonly actions: readonly string[];
+  readonly actionTrace: readonly OrdoActionTrace[];
   readonly conditions: readonly OrdoCondition[];
   readonly transitioned: boolean;
   readonly selectedTransition?: OrdoTransitionSelection;
@@ -82,7 +87,13 @@ function prepareStepContext<TPayload>(
   const stateResult = findOrdoState(definition, runtime.state);
   if (!stateResult.ok) return stateResult;
 
-  const delta = Math.max(0, deltaSeconds);
+  const timeScale = Math.max(
+    0,
+    (options.timeScale ?? 1) *
+      (definition.timeScale ?? 1) *
+      (stateResult.value.timeScale ?? 1)
+  );
+  const delta = Math.max(0, deltaSeconds) * timeScale;
   return ok({
     definition,
     runtime,
@@ -90,7 +101,9 @@ function prepareStepContext<TPayload>(
     state: stateResult.value,
     delta,
     elapsed: runtime.elapsed + delta,
-    consumeTriggers: options.consumeTriggers ?? true
+    timeScale,
+    consumeTriggers: options.consumeTriggers ?? true,
+    events: new Set(options.events ?? [])
   });
 }
 
@@ -112,7 +125,8 @@ function resolveStepMode<TPayload>(
     ctx.definition,
     ctx.state,
     ctx.runtime.parameters,
-    ctx.elapsed
+    ctx.elapsed,
+    ctx.events
   );
 
   if (!selected || selected.transition.to === ctx.state.id) {
@@ -138,6 +152,7 @@ function applyStepMode<TPayload>(
       nextRuntime: copyRuntime(ctx.runtime, { elapsed: ctx.elapsed }),
       nextState: ctx.state,
       actions: ctx.state.onUpdate ?? [],
+      actionTrace: createActionTrace(ctx.state.id, "update", ctx.state.onUpdate ?? []),
       conditions: [],
       transitioned: false
     };
@@ -148,6 +163,7 @@ function applyStepMode<TPayload>(
       nextRuntime: copyRuntime(ctx.runtime, { elapsed: ctx.elapsed, transition: mode.transition }),
       nextState: ctx.state,
       actions: ctx.state.onUpdate ?? [],
+      actionTrace: createActionTrace(ctx.state.id, "update", ctx.state.onUpdate ?? []),
       conditions: [],
       transitioned: false
     };
@@ -158,7 +174,10 @@ function applyStepMode<TPayload>(
       nextRuntime: copyRuntime(ctx.runtime, { elapsed: ctx.elapsed, transition: mode.transition }),
       nextState: ctx.state,
       actions: ctx.state.onUpdate ?? [],
-      conditions: mode.selected?.transition.conditions ?? [],
+      actionTrace: createActionTrace(ctx.state.id, "update", ctx.state.onUpdate ?? []),
+      conditions: mode.selected
+        ? getOrdoTransitionParameterConditions(mode.selected.transition)
+        : [],
       transitioned: false,
       ...(mode.selected ? { selectedTransition: mode.selected } : {})
     };
@@ -175,7 +194,11 @@ function applyStepMode<TPayload>(
     },
     nextState: mode.nextState,
     actions: [...(ctx.state.onExit ?? []), ...(mode.nextState.onEnter ?? [])],
-    conditions: mode.selected.transition.conditions ?? [],
+    actionTrace: [
+      ...createActionTrace(ctx.state.id, "exit", ctx.state.onExit ?? []),
+      ...createActionTrace(mode.nextState.id, "enter", mode.nextState.onEnter ?? [])
+    ],
+    conditions: getOrdoTransitionParameterConditions(mode.selected.transition),
     transitioned: true,
     selectedTransition: mode.selected
   };
@@ -216,9 +239,22 @@ function finalizeStep<TPayload>(
 
   return {
     runtime: consumedRuntime,
-    snapshot: createOrdoSnapshot(ctx.definition, consumedRuntime, draft.nextState, draft.actions),
+    snapshot: createOrdoSnapshot(ctx.definition, consumedRuntime, draft.nextState, {
+      actions: draft.actions,
+      actionTrace: draft.actionTrace,
+      delta: ctx.delta,
+      timeScale: ctx.timeScale
+    }),
     ...(draft.selectedTransition ? { selectedTransition: draft.selectedTransition } : {})
   };
+}
+
+function createActionTrace(
+  state: string,
+  phase: OrdoActionTrace["phase"],
+  actions: readonly string[]
+): readonly OrdoActionTrace[] {
+  return actions.map((id) => ({ id, phase, state }));
 }
 
 function copyRuntime(

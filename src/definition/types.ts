@@ -25,10 +25,25 @@ export interface OrdoCondition {
   readonly value?: OrdoParameterValue;
 }
 
+export interface OrdoEventCondition {
+  readonly event: string;
+}
+
+export interface OrdoConditionGroup {
+  readonly op: "and" | "or" | "not";
+  readonly conditions: readonly OrdoConditionExpression[];
+}
+
+export type OrdoConditionExpression =
+  | OrdoCondition
+  | OrdoEventCondition
+  | OrdoConditionGroup;
+
 export interface OrdoTransitionDefinition {
   readonly id?: string;
   readonly to: string;
   readonly conditions?: readonly OrdoCondition[];
+  readonly condition?: OrdoConditionExpression;
   readonly duration?: number;
   readonly exitTime?: number;
   readonly priority?: number;
@@ -40,6 +55,7 @@ export interface OrdoStateDefinition<TPayload = unknown> {
   readonly onEnter?: readonly string[];
   readonly onUpdate?: readonly string[];
   readonly onExit?: readonly string[];
+  readonly timeScale?: number;
   readonly payload?: TPayload;
 }
 
@@ -60,6 +76,7 @@ export interface OrdoDefinition<TPayload = unknown> {
   readonly parameters?: readonly OrdoParameterDefinition[];
   readonly globalTransitions?: readonly OrdoTransitionDefinition[];
   readonly transitionPolicy?: OrdoTransitionPolicy;
+  readonly timeScale?: number;
   readonly editorLayout?: OrdoEditorLayout;
 }
 
@@ -87,11 +104,14 @@ export interface OrdoRuntime {
 export interface OrdoSnapshot<TPayload = unknown> {
   readonly state: string;
   readonly elapsed: number;
+  readonly delta?: number;
+  readonly timeScale?: number;
   readonly previousState?: string;
   readonly forced?: boolean;
   readonly payload?: TPayload;
   readonly transition?: OrdoTransitionRuntime;
   readonly actions?: readonly string[];
+  readonly actionTrace?: readonly OrdoActionTrace[];
 }
 
 export interface OrdoStepResult<TPayload = unknown> {
@@ -102,12 +122,24 @@ export interface OrdoStepResult<TPayload = unknown> {
 
 export interface OrdoStepOptions {
   readonly consumeTriggers?: boolean;
+  readonly events?: readonly string[];
+  readonly timeScale?: number;
+}
+
+export type OrdoActionPhase = "enter" | "update" | "exit";
+
+export interface OrdoActionTrace {
+  readonly id: string;
+  readonly phase: OrdoActionPhase;
+  readonly state: string;
 }
 
 export interface OrdoBehaviorDefinition<TPayload = unknown> {
   readonly id: string;
   readonly machine: OrdoDefinition<TPayload>;
+  readonly history?: boolean;
   readonly children?: Readonly<Record<string, OrdoBehaviorDefinition<TPayload>>>;
+  readonly parallel?: Readonly<Record<string, OrdoBehaviorDefinition<TPayload>>>;
 }
 
 export interface OrdoBehaviorRuntime {
@@ -115,6 +147,8 @@ export interface OrdoBehaviorRuntime {
   readonly runtime: OrdoRuntime;
   readonly activeChild?: string;
   readonly child?: OrdoBehaviorRuntime;
+  readonly history?: Readonly<Record<string, OrdoBehaviorRuntime>>;
+  readonly parallel?: Readonly<Record<string, OrdoBehaviorRuntime>>;
 }
 
 export interface OrdoBehaviorSnapshot<TPayload = unknown> {
@@ -122,6 +156,7 @@ export interface OrdoBehaviorSnapshot<TPayload = unknown> {
   readonly snapshot: OrdoSnapshot<TPayload>;
   readonly activeChild?: string;
   readonly child?: OrdoBehaviorSnapshot<TPayload>;
+  readonly parallel?: Readonly<Record<string, OrdoBehaviorSnapshot<TPayload>>>;
 }
 
 export interface OrdoBehaviorStepResult<TPayload = unknown> {

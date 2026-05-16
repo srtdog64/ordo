@@ -109,6 +109,13 @@ function validateOrdoBehaviorDefinition<TPayload>(
     }
   }
 
+  for (const child of Object.values(definition.parallel ?? {})) {
+    const childValidation = validateOrdoBehaviorDefinition(child, policyInput);
+    if (!childValidation.ok) {
+      return childValidation;
+    }
+  }
+
   return ok(undefined);
 }
 
@@ -128,7 +135,18 @@ function mapOrdoBehaviorDefinition<TPayload>(
   return {
     id: definition.id,
     machine: mapMachine(definition.machine),
-    ...(children ? { children } : {})
+    ...(definition.history !== undefined ? { history: definition.history } : {}),
+    ...(children ? { children } : {}),
+    ...(definition.parallel
+      ? {
+          parallel: Object.fromEntries(
+            Object.entries(definition.parallel).map(([region, child]) => [
+              region,
+              mapOrdoBehaviorDefinition(child, mapMachine)
+            ])
+          )
+        }
+      : {})
   };
 }
 
