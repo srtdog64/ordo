@@ -1,8 +1,8 @@
 {
-  "name": "@exornea/ordo-timescale",
+  "name": "@exornea/ordo-runtime",
   "version": "0.12.0",
   "type": "module",
-  "description": "Host-side time-scale helpers for @exornea/ordo.",
+  "description": "Host-agnostic runtime layer for @exornea/ordo frame ticking, events, actions, and clock control.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -28,6 +28,7 @@
     "@exornea/ordo": "^0.12.0"
   },
   "devDependencies": {
+    "@exornea/ordo": "file:../..",
     "typescript": "^5.9.3"
   }
 }

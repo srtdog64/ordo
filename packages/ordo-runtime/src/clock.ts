@@ -1,4 +1,4 @@
-export interface OrdoTimeScaleInput {
+export interface OrdoClockInput {
   readonly deltaSeconds: number;
   readonly scale?: number;
   readonly paused?: boolean;
@@ -6,7 +6,7 @@ export interface OrdoTimeScaleInput {
   readonly maxDelta?: number;
 }
 
-export function scaleOrdoDelta(input: OrdoTimeScaleInput): number {
+export function scaleOrdoDelta(input: OrdoClockInput): number {
   if (input.paused) return 0;
 
   const scale = Math.max(0, input.scale ?? 1);
@@ -17,6 +17,6 @@ export function scaleOrdoDelta(input: OrdoTimeScaleInput): number {
   return Math.min(Math.max(scaled, min), max);
 }
 
-export function createOrdoTimeScaler(defaultScale = 1): (deltaSeconds: number, scale?: number) => number {
+export function createOrdoClock(defaultScale = 1): (deltaSeconds: number, scale?: number) => number {
   return (deltaSeconds, scale = defaultScale) => scaleOrdoDelta({ deltaSeconds, scale });
 }

@@ -171,11 +171,14 @@ stepOrdo(definition, runtime, 0.016, undefined, {
 ```
 
 Time scaling is deliberately outside the core stepper. Callers can pass a scaled
-delta directly or use `@exornea/ordo-timescale` for a small helper package:
+delta directly or use `@exornea/ordo-runtime` for the host-side runtime layer:
 
 ```ts
-const delta = scaleOrdoDelta({ deltaSeconds: frameDelta, scale: 0.5 });
-const stepped = stepOrdo(definition, runtime, delta);
+const ticked = tickOrdoRuntime(definition, runtime, {
+  deltaSeconds: frameDelta,
+  timeScale: 0.5,
+  events: ["jump_pressed"]
+});
 ```
 
 ## Hierarchical Behavior Machines
