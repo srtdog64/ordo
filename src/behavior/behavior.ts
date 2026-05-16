@@ -1,5 +1,5 @@
 import { ok, type OrdoResult } from "../core/result.js";
-import { DefaultOrdoPolicy } from "../core/policy.js";
+import { DefaultOrdoPolicy, logOrdoEvent, resolveOrdoPolicy } from "../core/policy.js";
 import { createOrdoRuntime, stepOrdo } from "../runtime/runtime.js";
 import { createOrdoSnapshot } from "../runtime/snapshot.js";
 import type {
@@ -7,6 +7,7 @@ import type {
   OrdoBehaviorRuntime,
   OrdoBehaviorSnapshot,
   OrdoBehaviorStepResult,
+  OrdoPolicy,
   OrdoPolicyInput,
   OrdoStepOptions
 } from "../definition/types.js";
@@ -14,6 +15,15 @@ import type {
 export function createOrdoBehaviorRuntime<TPayload>(
   definition: OrdoBehaviorDefinition<TPayload>,
   policyInput: OrdoPolicyInput = DefaultOrdoPolicy
+): OrdoResult<OrdoBehaviorRuntime> {
+  const policy = resolveOrdoPolicy(policyInput);
+  return createBehaviorRuntimeInternal(definition, policyInput, policy);
+}
+
+function createBehaviorRuntimeInternal<TPayload>(
+  definition: OrdoBehaviorDefinition<TPayload>,
+  policyInput: OrdoPolicyInput,
+  policy: OrdoPolicy
 ): OrdoResult<OrdoBehaviorRuntime> {
   const root = createOrdoRuntime(definition.machine, policyInput);
   if (!root.ok) return root;
@@ -23,8 +33,14 @@ export function createOrdoBehaviorRuntime<TPayload>(
     return ok({ id: definition.id, runtime: root.value });
   }
 
-  const child = createOrdoBehaviorRuntime(childDefinition, policyInput);
+  const child = createBehaviorRuntimeInternal(childDefinition, policyInput, policy);
   if (!child.ok) return child;
+
+  logOrdoEvent(policy, "info", "StateMachineStep", "BehaviorChild_Activated", {
+    parent: definition.id,
+    state: root.value.state,
+    child: childDefinition.id
+  });
 
   return ok({
     id: definition.id,
@@ -54,50 +70,69 @@ export function stepOrdoBehavior<TPayload>(
   policyInput: OrdoPolicyInput = DefaultOrdoPolicy,
   options: OrdoStepOptions = {}
 ): OrdoResult<OrdoBehaviorStepResult<TPayload>> {
+  const policy = resolveOrdoPolicy(policyInput);
   const steppedRoot = stepOrdo(definition.machine, runtime.runtime, deltaSeconds, policyInput, options);
   if (!steppedRoot.ok) return steppedRoot;
 
   const childDefinition = getActiveChildDefinition(definition, steppedRoot.value.runtime.state);
   if (!childDefinition) {
-    const nextRuntime: OrdoBehaviorRuntime = {
-      id: definition.id,
-      runtime: steppedRoot.value.runtime
-    };
+    if (runtime.activeChild !== undefined) {
+      logOrdoEvent(policy, "info", "StateMachineStep", "BehaviorChild_Released", {
+        parent: definition.id,
+        state: steppedRoot.value.runtime.state,
+        child: runtime.activeChild
+      });
+    }
     return ok({
-      runtime: nextRuntime,
-      snapshot: {
-        id: definition.id,
-        snapshot: steppedRoot.value.snapshot
-      }
+      runtime: { id: definition.id, runtime: steppedRoot.value.runtime },
+      snapshot: { id: definition.id, snapshot: steppedRoot.value.snapshot }
     });
   }
 
-  const childRuntimeResult =
-    runtime.activeChild === childDefinition.id && runtime.child
-      ? ok(runtime.child)
-      : createOrdoBehaviorRuntime(childDefinition, policyInput);
+  const reusingChild = runtime.activeChild === childDefinition.id && runtime.child !== undefined;
+  if (!reusingChild && runtime.activeChild !== undefined && runtime.activeChild !== childDefinition.id) {
+    logOrdoEvent(policy, "info", "StateMachineStep", "BehaviorChild_Released", {
+      parent: definition.id,
+      state: steppedRoot.value.runtime.state,
+      child: runtime.activeChild
+    });
+  }
 
+  const childRuntimeResult = reusingChild
+    ? ok(runtime.child!)
+    : createBehaviorRuntimeInternal(childDefinition, policyInput, policy);
   if (!childRuntimeResult.ok) return childRuntimeResult;
 
-  const shouldStepChild = runtime.activeChild === childDefinition.id;
-  const childStep = shouldStepChild
+  if (!reusingChild) {
+    logOrdoEvent(policy, "info", "StateMachineStep", "BehaviorChild_Activated", {
+      parent: definition.id,
+      state: steppedRoot.value.runtime.state,
+      child: childDefinition.id
+    });
+  }
+
+  const childStep = reusingChild
     ? stepOrdoBehavior(childDefinition, childRuntimeResult.value, deltaSeconds, policyInput, options)
     : ok({
         runtime: childRuntimeResult.value,
         snapshot: createOrdoBehaviorSnapshot(childDefinition, childRuntimeResult.value)
       });
-
   if (!childStep.ok) return childStep;
 
-  const nextRuntime: OrdoBehaviorRuntime = {
-    id: definition.id,
-    runtime: steppedRoot.value.runtime,
-    activeChild: childDefinition.id,
-    child: childStep.value.runtime
-  };
+  if (reusingChild) {
+    logOrdoEvent(policy, "debug", "StateMachineStep", "BehaviorChild_Stepped", {
+      parent: definition.id,
+      child: childDefinition.id
+    });
+  }
 
   return ok({
-    runtime: nextRuntime,
+    runtime: {
+      id: definition.id,
+      runtime: steppedRoot.value.runtime,
+      activeChild: childDefinition.id,
+      child: childStep.value.runtime
+    },
     snapshot: {
       id: definition.id,
       snapshot: steppedRoot.value.snapshot,

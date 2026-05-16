@@ -47,7 +47,7 @@ export function ordoError(
     code,
     message,
     stage,
-    ...(details ? { details } : {}),
-    ...(cause ? { cause } : {})
+    ...(details !== undefined ? { details } : {}),
+    ...(cause !== undefined ? { cause } : {})
   };
 }

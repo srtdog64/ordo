@@ -38,12 +38,3 @@ export function getOrdoStateIndex<TPayload>(
   );
   return index;
 }
-
-export function assertOrdoStateExists<TPayload>(
-  definition: OrdoDefinition<TPayload>,
-  state: string
-): OrdoResult<void> {
-  const result = findOrdoState(definition, state);
-  if (result.ok) return ok(undefined);
-  return err(ordoError("STATE_MISSING", `State not found: ${state}`, "StateMachineStep", { id: state }));
-}

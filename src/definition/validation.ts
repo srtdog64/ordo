@@ -13,7 +13,10 @@ export function validateOrdoDefinition<TPayload>(
   policyInput: OrdoPolicyInput = DefaultOrdoPolicy
 ): OrdoResult<void> {
   const report = inspectOrdoDefinition(definition, policyInput);
-  return report.ok ? ok(undefined) : err(report.errors[0]!);
+  if (report.ok) return ok(undefined);
+  const [first] = report.errors;
+  if (!first) return ok(undefined);
+  return err(first);
 }
 
 export function inspectOrdoDefinition<TPayload>(

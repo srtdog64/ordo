@@ -173,12 +173,6 @@ export interface OrdoValidationPolicy {
   readonly strictTypeChecking: boolean;
 }
 
-export interface OrdoRetryPolicy {
-  readonly maxAttempts: number;
-  readonly retryOn: (error: OrdoErrorCode) => boolean;
-  readonly backoffMs: (attempt: number) => number;
-}
-
 export interface OrdoPersistencePolicy {
   readonly prettyPrint: boolean;
   readonly includeEditorLayout: boolean;
@@ -198,11 +192,15 @@ export interface OrdoPolicyInput {
   readonly logging?: OrdoLoggingPolicy;
 }
 
+export type OrdoLogLevel = "debug" | "info" | "warn" | "error";
+
 export interface OrdoLogEntry {
   readonly ts: string;
-  readonly level: "info" | "error";
+  readonly level: OrdoLogLevel;
   readonly stage: OrdoStage;
   readonly event: string;
+  readonly requestId?: string;
+  readonly runtimeFingerprint?: string;
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly error?: {
     readonly code: OrdoErrorCode;
@@ -212,6 +210,12 @@ export interface OrdoLogEntry {
 
 export type OrdoLogSink = (entry: OrdoLogEntry) => void;
 
+export type OrdoLogBaseFields = Partial<
+  Pick<OrdoLogEntry, "requestId" | "runtimeFingerprint" | "meta">
+>;
+
 export interface OrdoLoggingPolicy {
   readonly sink?: OrdoLogSink;
+  readonly minLevel?: OrdoLogLevel;
+  readonly baseFields?: () => OrdoLogBaseFields;
 }
