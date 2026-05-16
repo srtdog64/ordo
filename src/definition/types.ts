@@ -104,6 +104,31 @@ export interface OrdoStepOptions {
   readonly consumeTriggers?: boolean;
 }
 
+export interface OrdoBehaviorDefinition<TPayload = unknown> {
+  readonly id: string;
+  readonly machine: OrdoDefinition<TPayload>;
+  readonly children?: Readonly<Record<string, OrdoBehaviorDefinition<TPayload>>>;
+}
+
+export interface OrdoBehaviorRuntime {
+  readonly id: string;
+  readonly runtime: OrdoRuntime;
+  readonly activeChild?: string;
+  readonly child?: OrdoBehaviorRuntime;
+}
+
+export interface OrdoBehaviorSnapshot<TPayload = unknown> {
+  readonly id: string;
+  readonly snapshot: OrdoSnapshot<TPayload>;
+  readonly activeChild?: string;
+  readonly child?: OrdoBehaviorSnapshot<TPayload>;
+}
+
+export interface OrdoBehaviorStepResult<TPayload = unknown> {
+  readonly runtime: OrdoBehaviorRuntime;
+  readonly snapshot: OrdoBehaviorSnapshot<TPayload>;
+}
+
 export interface OrdoValidationReport {
   readonly ok: boolean;
   readonly errors: readonly OrdoError[];

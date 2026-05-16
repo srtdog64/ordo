@@ -11,6 +11,7 @@ it through adapters instead of hiding it inside the engine monorepo.
 `@exornea/ordo` owns:
 
 - declarative state orchestration definitions
+- hierarchical behavior machine composition
 - immutable runtime cursors
 - pure stepping
 - transition condition evaluation
@@ -75,6 +76,7 @@ split by ownership boundary:
 - `core/`: Result values, policy resolution, transition policy lookup, and
   structured logging sink
 - `definition/`: public types, definition validation, and condition type checks
+- `behavior/`: hierarchical behavior machine creation, stepping, and snapshots
 - `machine/`: condition evaluation, active state helpers, indexed state lookup,
   trigger consumption, transition selection, and active transition advancement
 - `runtime/`: runtime creation, stepping, parameter patching, forced state
@@ -131,24 +133,44 @@ Definitions are treated as immutable runtime inputs. Ordo builds and caches a
 state ID index per definition object so state lookup does not depend on a
 linear scan during stepping or snapshot projection.
 
-## Hierarchy Boundary
+## Hierarchical Behavior Machines
 
-Ordo v0.10 keeps native state topology flat. Complex hierarchical workflows can
-compose nested Ordo runtimes in a state payload or in the host adapter, while
-the core runtime keeps one active state ID and one transition cursor. A future
-native HSM layer should preserve this boundary: parent/sub-state selection
-belongs beside indexed lookup and transition selection, not in rendering,
-editor state, or domain command adapters.
+Ordo keeps each `OrdoDefinition` flat, then composes flat machines through an
+`OrdoBehaviorDefinition`. A parent state can own one child behavior. When the
+parent changes state, Ordo activates the child attached to the new state and
+creates a fresh child runtime. When the parent remains in the same state, the
+active child behavior steps with the same delta.
+
+```ts
+const actor = {
+  id: "actor",
+  machine: baseMachine,
+  children: {
+    locomotion: locomotionBehavior,
+    combat: combatBehavior
+  }
+};
+
+const created = createOrdoBehaviorRuntime(actor);
+const stepped = stepOrdoBehavior(actor, created.value, 0.016);
+```
+
+This is intentionally HBM composition rather than nested state syntax inside
+`OrdoStateDefinition`. The flat FSM runtime remains inspectable, while complex
+actors, tools, and workflows can layer parent/child behavior without mixing
+rendering, editor state, or domain command adapters into Ordo.
 
 ## Scenario Witnesses
 
-The test suite includes three state-machine scenario witnesses:
+The test suite includes state-machine and behavior-machine scenario witnesses:
 
 - enemy AI: patrol, chase, attack, recover, and global defeat
 - combo animation: blocking blend windows, exit times, trigger retention, and
   chain priority
 - forced overlay: knockback state blocks normal AI, then restores the previous
   cursor before continuing
+- behavior hierarchy: parent actor states swap locomotion/combat child machines
+  while active child states step independently
 
 ## Geukbit Integration Direction
 

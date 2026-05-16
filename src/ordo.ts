@@ -1,3 +1,4 @@
+export * from "./behavior/behavior.js";
 export * from "./core/policy.js";
 export * from "./definition/validation.js";
 export * from "./machine/condition.js";
