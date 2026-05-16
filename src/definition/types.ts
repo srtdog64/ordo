@@ -226,6 +226,7 @@ export interface OrdoLogEntry {
   readonly level: OrdoLogLevel;
   readonly stage: OrdoStage;
   readonly event: string;
+  readonly errorCode?: OrdoErrorCode;
   readonly requestId?: string;
   readonly runtimeFingerprint?: string;
   readonly meta?: Readonly<Record<string, unknown>>;
@@ -245,4 +246,5 @@ export interface OrdoLoggingPolicy {
   readonly sink?: OrdoLogSink;
   readonly minLevel?: OrdoLogLevel;
   readonly baseFields?: () => OrdoLogBaseFields;
+  readonly timestamp?: () => string;
 }

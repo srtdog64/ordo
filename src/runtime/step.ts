@@ -86,7 +86,7 @@ function prepareStepContext<TPayload>(
   const stateResult = findOrdoState(definition, runtime.state);
   if (!stateResult.ok) return stateResult;
 
-  const delta = Math.max(0, deltaSeconds);
+  const delta = Number.isFinite(deltaSeconds) ? Math.max(0, deltaSeconds) : 0;
   return ok({
     definition,
     runtime,

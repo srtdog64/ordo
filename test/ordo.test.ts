@@ -93,6 +93,19 @@ describe("ordo", () => {
     expect(afterExit.ok && (afterExit as any).value.runtime.state).toBe("idle");
   });
 
+  it("treats non-finite step deltas as zero", () => {
+    const definition = movementDefinition();
+    const created = createOrdoRuntime(definition);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const stepped = stepOrdo(definition, created.value, Number.NaN);
+    expect(stepped.ok).toBe(true);
+    if (!stepped.ok) return;
+
+    expect(stepped.value.runtime.elapsed).toBe(0);
+  });
+
   it("selects the highest priority eligible transition", () => {
     const definition: OrdoDefinition = {
       initial: "idle",

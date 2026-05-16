@@ -9,10 +9,14 @@ export interface OrdoClockInput {
 export function scaleOrdoDelta(input: OrdoClockInput): number {
   if (input.paused) return 0;
 
-  const scale = Math.max(0, input.scale ?? 1);
-  const scaled = Math.max(0, input.deltaSeconds) * scale;
-  const min = input.minDelta ?? 0;
-  const max = input.maxDelta ?? Number.POSITIVE_INFINITY;
+  const scaleInput = input.scale ?? 1;
+  const scale = Number.isFinite(scaleInput) ? Math.max(0, scaleInput) : 1;
+  const base = Number.isFinite(input.deltaSeconds) ? Math.max(0, input.deltaSeconds) : 0;
+  const scaled = base * scale;
+  const min = Number.isFinite(input.minDelta ?? 0) ? input.minDelta ?? 0 : 0;
+  const max = Number.isFinite(input.maxDelta ?? Number.POSITIVE_INFINITY)
+    ? input.maxDelta ?? Number.POSITIVE_INFINITY
+    : Number.POSITIVE_INFINITY;
 
   return Math.min(Math.max(scaled, min), max);
 }

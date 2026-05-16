@@ -20,6 +20,8 @@ describe("ordo-runtime package", () => {
     expect(scaleOrdoDelta({ deltaSeconds: 1, scale: 0.25 })).toBe(0.25);
     expect(scaleOrdoDelta({ deltaSeconds: 1, paused: true })).toBe(0);
     expect(scaleOrdoDelta({ deltaSeconds: -1, scale: 2 })).toBe(0);
+    expect(scaleOrdoDelta({ deltaSeconds: Number.NaN, scale: 2 })).toBe(0);
+    expect(scaleOrdoDelta({ deltaSeconds: 1, scale: Number.POSITIVE_INFINITY })).toBe(1);
     expect(scaleOrdoDelta({ deltaSeconds: 10, maxDelta: 0.25 })).toBe(0.25);
 
     const slow = createOrdoClock(0.5);

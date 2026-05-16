@@ -104,6 +104,24 @@ describe("logging", () => {
     }
   });
 
+  it("uses injected timestamps and exposes validation error codes", () => {
+    const { entries, sink } = collector();
+    const result = createOrdoRuntime(
+      { initial: "missing", states: [{ id: "idle" }] },
+      { logging: { sink, timestamp: () => "2026-05-17T00:00:00.000Z" } }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(entries[0]).toMatchObject({
+      ts: "2026-05-17T00:00:00.000Z",
+      level: "error",
+      stage: "ValidateInput",
+      event: "RuntimeCreation_Failed",
+      errorCode: "STATE_MISSING",
+      error: { code: "STATE_MISSING" }
+    });
+  });
+
   it("emits BehaviorChild_Activated when a parent state has a child machine", () => {
     const { entries, sink } = collector();
     const definition: OrdoBehaviorDefinition = {

@@ -69,10 +69,11 @@ export function logOrdoEvent(
     data || base.meta ? { ...(base.meta ?? {}), ...(data ?? {}) } : undefined;
 
   const entry: OrdoLogEntry = {
-    ts: new Date().toISOString(),
+    ts: logging?.timestamp?.() ?? new Date().toISOString(),
     level,
     stage,
     event,
+    ...(error ? { errorCode: error.code } : {}),
     ...(base.requestId !== undefined ? { requestId: base.requestId } : {}),
     ...(base.runtimeFingerprint !== undefined
       ? { runtimeFingerprint: base.runtimeFingerprint }
