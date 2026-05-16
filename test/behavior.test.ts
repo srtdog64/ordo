@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createOrdoBehaviorRuntime,
+  deserializeOrdoBehaviorDefinition,
+  deserializeOrdoBehaviorRuntime,
   patchOrdoParameters,
+  serializeOrdoBehaviorDefinition,
+  serializeOrdoBehaviorRuntime,
   setOrdoParameter,
   stepOrdoBehavior,
   type OrdoBehaviorDefinition,
@@ -123,6 +127,46 @@ describe("ordo behavior machine", () => {
       runtime: { state: "locomotion" },
       activeChild: "locomotion-child",
       child: { runtime: { state: "idle", elapsed: 0 } }
+    });
+  });
+
+  it("serializes behavior definitions and behavior runtimes as save boundaries", () => {
+    const definition: OrdoBehaviorDefinition = {
+      id: "root",
+      machine: {
+        initial: "active",
+        states: [{ id: "active" }],
+        editorLayout: { states: { active: { x: 10, y: 20 } } }
+      },
+      children: {
+        active: {
+          id: "child",
+          machine: {
+            initial: "idle",
+            states: [{ id: "idle" }]
+          }
+        }
+      }
+    };
+
+    const json = serializeOrdoBehaviorDefinition(definition);
+    expect(json).not.toContain("editorLayout");
+
+    const restoredDefinition = deserializeOrdoBehaviorDefinition(json);
+    expect(restoredDefinition.ok).toBe(true);
+    if (!restoredDefinition.ok) return;
+    expect(restoredDefinition.value.children?.active.machine.initial).toBe("idle");
+
+    const runtime = mustCreateBehavior(definition);
+    const runtimeJson = serializeOrdoBehaviorRuntime(runtime);
+    const restoredRuntime = deserializeOrdoBehaviorRuntime(runtimeJson);
+    expect(restoredRuntime.ok).toBe(true);
+    if (!restoredRuntime.ok) return;
+    expect(restoredRuntime.value).toMatchObject({
+      id: "root",
+      runtime: { state: "active" },
+      activeChild: "child",
+      child: { runtime: { state: "idle" } }
     });
   });
 });

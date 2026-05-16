@@ -84,6 +84,13 @@ split by ownership boundary:
 - `projection/`: typed editor graph projection
 - `persistence/`: definition/runtime serialization
 
+Additional load-bearing notes live in `docs/`:
+
+- `docs/last-fsm-mapping.md`: mapping from the LAST Unity/C# FSM and save
+  system into Ordo concepts
+- `docs/persistence-boundaries.md`: authoritative save points and host-owned
+  persistence shell
+
 ## Policy
 
 Ordo accepts partial policy overrides and merges them with conservative
@@ -159,6 +166,20 @@ This is intentionally HBM composition rather than nested state syntax inside
 `OrdoStateDefinition`. The flat FSM runtime remains inspectable, while complex
 actors, tools, and workflows can layer parent/child behavior without mixing
 rendering, editor state, or domain command adapters into Ordo.
+
+## Persistence
+
+Ordo can serialize flat definitions, behavior definitions, flat runtimes, and
+behavior runtimes. The host still owns save slots, file paths, entity IDs, and
+domain payloads.
+
+```ts
+const definitionJson = serializeOrdoBehaviorDefinition(actor);
+const runtimeJson = serializeOrdoBehaviorRuntime(runtime);
+const restored = deserializeOrdoBehaviorRuntime(runtimeJson);
+```
+
+For the full save boundary table, see `docs/persistence-boundaries.md`.
 
 ## Scenario Witnesses
 
