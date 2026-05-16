@@ -3,6 +3,7 @@
   "version": "0.12.0",
   "type": "module",
   "description": "Host-agnostic runtime layer for @exornea/ordo frame ticking, events, actions, and clock control.",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
