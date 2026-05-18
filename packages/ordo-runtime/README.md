@@ -26,3 +26,8 @@ const result = tickOrdoRuntime(definition, runtime, {
 The package does not know about Unity, React, Three.js, DOM APIs, files, save
 slots, or animation mixers. Hosts map `snapshot.actionTrace` to their own
 commands with `dispatchOrdoActions`.
+
+It also does not create workers, own worker pools, expose locks, or use Atomics.
+Hosts that want Web Workers, Node worker threads, Unity jobs, or another
+scheduler should send frame envelopes across their own execution boundary and
+commit the returned runtime cursor themselves.

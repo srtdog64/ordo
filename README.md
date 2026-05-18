@@ -95,6 +95,8 @@ Additional load-bearing notes live in `docs/`:
   persistence shell
 - `docs/runtime-boundary-validation.md`: trust-boundary map, hot-path
   discipline, and host strategies for extending union safety into runtime
+- `docs/concurrency-boundary.md`: thread-safety expectations and why worker
+  scheduling, pools, locks, and Atomics remain host-owned
 
 ## Policy
 
@@ -183,6 +185,17 @@ const ticked = tickOrdoRuntime(definition, runtime, {
   events: ["jump_pressed"]
 });
 ```
+
+## Concurrency Boundary
+
+Ordo is thread-safe by design because definitions and runtime cursors are plain
+data inputs to pure step functions. The library does not create workers, own
+pools, expose locks, or use Atomics. Hosts that want Web Workers, Node worker
+threads, Unity jobs, or another scheduler should pass cloned definitions,
+runtimes, frames, and events across their own execution boundary, then keep the
+returned runtime cursor they choose to commit.
+
+See `docs/concurrency-boundary.md` for the full contract.
 
 ## Hierarchical Behavior Machines
 
