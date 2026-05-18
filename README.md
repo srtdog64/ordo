@@ -93,6 +93,8 @@ Additional load-bearing notes live in `docs/`:
   system into Ordo concepts
 - `docs/persistence-boundaries.md`: authoritative save points and host-owned
   persistence shell
+- `docs/runtime-boundary-validation.md`: trust-boundary map, hot-path
+  discipline, and host strategies for extending union safety into runtime
 
 ## Policy
 
